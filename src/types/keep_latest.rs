@@ -1,5 +1,7 @@
 use std::{
-    mem::zeroed, ptr::{self, null_mut}, sync::{atomic::AtomicPtr, RwLock}
+    mem::zeroed,
+    ptr::{self, null_mut},
+    sync::{atomic::AtomicPtr, RwLock},
 };
 
 pub struct KeepLatest<T> {
@@ -19,17 +21,15 @@ impl<T> KeepLatest<T> {
     }
 
     pub fn init(&self) {
-        *self.last.write().unwrap() = Box::into_raw(Box::new(unsafe{zeroed()}));
+        *self.last.write().unwrap() = Box::into_raw(Box::new(unsafe { zeroed() }));
     }
 
     pub fn get(&self, data: &mut T) {
-        let ptr = self
-            .ptr
-            .swap(null_mut(), std::sync::atomic::Ordering::SeqCst);
+        let ptr = self.ptr.swap(null_mut(), std::sync::atomic::Ordering::SeqCst);
 
         if ptr.is_null() {
             let last_ptr = *self.last.read().unwrap();
-            
+
             unsafe {
                 ptr::copy_nonoverlapping(last_ptr, data, 1);
             }

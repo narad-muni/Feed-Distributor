@@ -1,4 +1,7 @@
-use std::{mem::{self}, ptr};
+use std::{
+    mem::{self},
+    ptr,
+};
 
 pub fn bytes_to_struct<T>(s: &[u8]) -> T {
     unsafe {
@@ -8,8 +11,8 @@ pub fn bytes_to_struct<T>(s: &[u8]) -> T {
     }
 }
 
-pub fn struct_to_bytes<T>(s: &T, buffer: &mut [u8]) {
-    unsafe{
+pub fn struct_to_bytes<T: Copy>(s: &T, buffer: &mut [u8]) {
+    unsafe {
         let mut size = std::mem::size_of::<T>();
 
         // Ensure the buffer is large enough

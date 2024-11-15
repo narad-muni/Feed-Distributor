@@ -1,5 +1,5 @@
-use std::{cell::UnsafeCell, sync::RwLock};
 use crossbeam::queue::SegQueue;
+use std::{cell::UnsafeCell, sync::RwLock};
 
 #[derive(Debug)]
 pub struct ReuseArr<T> {
@@ -11,12 +11,12 @@ pub struct ReuseArr<T> {
 // Modifying inner elements take read lock, because one thread in threadpool only modifies one index.
 // Multiple threads are not allowed to modify inner elements.
 
-// If we require multiple threads to access same index, we will need to replace unsafecell with rwlock
+// If we require multiple threads to access same index, we will need to place rwlock inside option i.e. unsafecell<option<rwlock>>
 
-unsafe impl <T> Sync for ReuseArr<T> {}
-unsafe impl <T> Send for ReuseArr<T> {}
+unsafe impl<T> Sync for ReuseArr<T> {}
+unsafe impl<T> Send for ReuseArr<T> {}
 
-impl <T> ReuseArr<T> {
+impl<T> ReuseArr<T> {
     pub fn new() -> Self {
         let free_queue = SegQueue::new();
         let arr = RwLock::new(Vec::new());
@@ -29,17 +29,14 @@ impl <T> ReuseArr<T> {
             }
         }
 
-        Self {
-            arr,
-            free_queue,
-        }
+        Self { arr, free_queue }
     }
 
     pub fn reserve(&self) -> usize {
         if let Some(idx) = self.free_queue.pop() {
-
             let arr = self.arr.read().unwrap();
 
+            // If index is already allocated
             if idx < arr.len() {
                 let element = arr[idx].get();
 
@@ -49,7 +46,7 @@ impl <T> ReuseArr<T> {
             } else {
                 // Drop read lock
                 drop(arr);
-                
+
                 // Get write lock
                 let mut arr = self.arr.write().unwrap();
 
@@ -66,7 +63,7 @@ impl <T> ReuseArr<T> {
             let size = arr.capacity();
 
             // Push to free queue
-            for i in idx+1..size {
+            for i in idx + 1..size {
                 self.free_queue.push(i);
             }
 
@@ -76,7 +73,6 @@ impl <T> ReuseArr<T> {
 
     pub fn insert(&self, data: T) -> usize {
         if let Some(idx) = self.free_queue.pop() {
-
             let arr = self.arr.read().unwrap();
 
             if idx < arr.len() {
@@ -86,10 +82,9 @@ impl <T> ReuseArr<T> {
                     *element = Some(data);
                 }
             } else {
-
                 // Drop read lock
                 drop(arr);
-                
+
                 // Get write lock
                 let mut arr = self.arr.write().unwrap();
 
@@ -139,9 +134,7 @@ impl <T> ReuseArr<T> {
 
         let element = arr[idx].get();
 
-        unsafe {
-            &*element
-        }
+        unsafe { &*element }
     }
 
     pub fn get_mut(&self, idx: usize) -> &mut Option<T> {
@@ -149,9 +142,7 @@ impl <T> ReuseArr<T> {
 
         let element = arr[idx].get();
 
-        unsafe {
-            &mut *element
-        }
+        unsafe { &mut *element }
     }
 
     pub fn remove(&self, idx: usize) -> Option<T> {
@@ -159,8 +150,6 @@ impl <T> ReuseArr<T> {
 
         let arr = self.arr.read().unwrap();
 
-        unsafe {
-            (*arr[idx].get()).take()
-        }
+        unsafe { (*arr[idx].get()).take() }
     }
 }
